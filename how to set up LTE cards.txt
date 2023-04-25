@@ -1,0 +1,242 @@
+Ubuntu Server All Versions
+***Steps/code used to set up LTE***
+
+
+Ubuntu Server 18.04
+======================
+Install 18.04 server
+sudo apt update
+sudo apt install net-tools
+sudo apt install network-manager
+sudo systemctl stop systemd-resolved
+sudo systemctl disable systemd-resolved
+sudo systemctl start network-manager
+sudo systemctl enable network-manager
+sudo reboot now
+
+sudo ls /etc/netplan
+sudo vi /etc/netplan/00-installer-config.yaml
+For each ethernet listed, add "optional: true" below each "dhcp4: true" line.
+Beneath version number line, add "renderer: NetworkManager".
+Save changes and exit .yaml file.
+sudo netplan apply
+sudo reboot now
+
+sudo nmcli d
+Ethernet should now be connected, test with ping 8.8.8.8
+sudo systemctl start systemd-resolved
+sudo systemctl enable systemd-resolved
+sudo reboot now
+
+sudo apt install libqmi-utils
+sudo apt install udhcpc
+sudo nmcli d (check the device name for the running ethernet connection, mine was enp2s0 for example; from this step on wherever you see enp2s0, replace with your device name))
+sudo ip link set dev enp2s0 up
+sudo dhclient enp2s0
+sudo reboot now
+
+sudo nmcli d (check for device name of LTE card, mine was named cdc-wdm2 for example, look for cdc- or a name that starts with w)
+sudo qmicli --device=/dev/cdc-wdm2 --device-open-proxy --get-wwan-iface (remember whatever the listed name is, mine was wwan0 for example)
+The most recent Qualcomm based cellular modules only expose QMI interfaces that can support Raw-IP mode. Sierra Wireless EM/MC74 and EM75 series modules, Telit LM940 and LN940 series for example require this.
+Check what IP-mode the host system is configured for:
+qmicli --device=/dev/cdc-wdm2 --get-expected-data-format
+Check what IP-mode the cellular module require:
+qmicli --device=/dev/cdc-wdm2 --device-open-proxy --wda-get-data-format
+
+If Raw-IP is not set by default, do the following:
+to change qmi_wwan driver to use Raw-IP:
+Disable the network interfaces exposed by the cellular module:
+ip link set dev wwan0 down
+Trigger the Raw-IP support:
+echo Y > /sys/class/net/wwan0/qmi/raw_ip
+Enable the network interfaces again:
+ip link set dev wwan0 up
+
+sudo vi /etc/netplan/00-installer-config.yaml
+Edit your .yaml file so that it looks like this (with your device names placed accordingly, everything listed below is how my .yaml file looked, you need to add all the modem info you see below):
+
+network:
+  ethernets:
+    enp1s0:
+      dhcp4: true
+      optional: true
+    enp2s0:
+      dhcp4: true
+      optional: true
+    enp3s0:
+      dhcp4: true
+      optional: true
+  version: 2
+  renderer: NetworkManager
+  modems:
+    cdc-wdm2:
+      apn: Wbdata
+      dhcp4: true
+      optional: true
+
+Save changes and exit .yaml file.
+sudo netplan apply
+sudo reboot now
+
+sudo qmicli --device=/dev/cdc-wdm2 --device-open-proxy --wds-start-network="ip-type=4,apn=Wbdata" --client-no-release-cid (you must have an APN for your SIM card, mine was Wbdata for example)
+Once you see "Network started", type the following: sudo udhcpc -q -f -n -i wwan0 (remember wwan0 was mine and is just an example)
+After executing above command, an IP should be leased to you.
+At this point, disconnect any external network connections (such as ethernet connections).
+sudo nmcli d (the LTE card should now display as green and status type connected, should be only device listed assuming you disconnected any ethernet/wifi connections)
+ping 8.8.8.8 (test that LTE is working)
+
+
+Ubuntu Server 20.04
+======================
+Install 20.04 server
+sudo apt update
+sudo apt install net-tools
+sudo apt install network-manager
+sudo systemctl stop systemd-resolved
+sudo systemctl disable systemd-resolved
+sudo systemctl start network-manager
+sudo systemctl enable network-manager
+sudo ls /etc/netplan
+sudo vi /etc/netplan/00-installer-config.yaml
+For each ethernet listed, add "optional: true" below each "dhcp4: true" line.
+Beneath version number line, add "renderer: NetworkManager".
+Save changes and exit .yaml file.
+sudo netplan apply
+sudo reboot now
+
+sudo nmcli d
+Ethernet should now be connected, test with ping 8.8.8.8
+sudo systemctl start systemd-resolved
+sudo systemctl enable systemd-resolved
+sudo apt install libqmi-utils
+sudo apt install udhcpc
+sudo nmcli d (check the device name for the running ethernet connection, mine was enp2s0 for example; from this step on wherever you see enp2s0, replace with your device name)
+sudo ip link set dev enp2s0 up
+sudo dhclient enp2s0
+sudo nmcli d (check for device name of LTE card, mine was named cdc-wdm2 for example, look for cdc- or a name that starts with w)
+sudo qmicli --device=/dev/cdc-wdm2 --device-open-proxy --get-wwan-iface (remember whatever the listed name is, mine was wwan0 for example)
+
+The most recent Qualcomm based cellular modules only expose QMI interfaces that can support Raw-IP mode. Sierra Wireless EM/MC74 and EM75 series modules, Telit LM940 and LN940 series for example require this.
+Check what IP-mode the host system is configured for:
+qmicli --device=/dev/cdc-wdm2 --get-expected-data-format
+Check what IP-mode the cellular module require:
+qmicli --device=/dev/cdc-wdm2 --device-open-proxy --wda-get-data-format
+
+***If Raw-IP is not set by default, do the following:
+to change qmi_wwan driver to use Raw-IP:
+Disable the network interfaces exposed by the cellular module:
+ip link set dev wwan0 down
+Trigger the Raw-IP support:
+echo Y > /sys/class/net/wwan0/qmi/raw_ip
+Enable the network interfaces again:
+ip link set dev wwan0 up
+
+
+sudo vi /etc/netplan/00-installer-config.yaml
+Edit your .yaml file so that it looks like this (with your device names placed accordingly, everything listed below is how my .yaml file looked, you need to add all the modem info you see below):
+
+network:
+  ethernets:
+    enp1s0:
+      dhcp4: true
+      optional: true
+    enp2s0:
+      dhcp4: true
+      optional: true
+    enp3s0:
+      dhcp4: true
+      optional: true
+  version: 2
+  renderer: NetworkManager
+  modems:
+    cdc-wdm2:
+      apn: Wbdata
+      dhcp4: true
+      optional: true
+
+Save changes and exit .yaml file.
+sudo netplan apply
+sudo reboot now
+
+sudo qmicli --device=/dev/cdc-wdm2 --device-open-proxy --wds-start-network="ip-type=4,apn=Wbdata" --client-no-release-cid (you must have an APN for your SIM card, mine was Wbdata for example)
+Once you see "Network started", type the following: sudo udhcpc -q -f -n -i wwan0 (remember wwan0 was mine and is just an example)
+After executing above command, an IP should be leased to you.
+At this point, disconnect any external network connections (such as ethernet connections).
+sudo nmcli d (the LTE card should now display as green and status type connected, should be only device listed assuming you disconnected any ethernet/wifi connections)
+ping 8.8.8.8 (test that LTE is working)
+
+
+Ubuntu Server 22.04
+======================
+Install 22.04 server
+sudo apt update
+sudo apt install net-tools
+sudo apt install network-manager
+sudo ls /etc/netplan
+sudo vi /etc/netplan/00-installer-config.yaml
+For each ethernet listed, add "optional: true" below each "dhcp4: true" line.
+Beneath version number line, add "renderer: NetworkManager".
+Save changes and exit .yaml file.
+sudo netplan apply
+sudo reboot now
+
+sudo nmcli d
+Ethernet should now be connected, test with ping 8.8.8.8
+sudo systemctl start systemd-resolved
+sudo systemctl enable systemd-resolved
+sudo apt install libqmi-utils
+sudo apt install udhcpc
+sudo nmcli d (check the device name for the running ethernet connection, mine was enp2s0 for example; from this step on wherever you see enp2s0, replace with your device name)
+sudo ip link set dev enp2s0 up
+sudo dhclient enp2s0
+sudo nmcli d (check for device name of LTE card, mine was named cdc-wdm2 for example, look for cdc- or a name that starts with w)
+sudo qmicli --device=/dev/cdc-wdm2 --device-open-proxy --get-wwan-iface (remember whatever the listed name is, mine was wwan0 for example)
+
+The most recent Qualcomm based cellular modules only expose QMI interfaces that can support Raw-IP mode. Sierra Wireless EM/MC74 and EM75 series modules, Telit LM940 and LN940 series for example require this.
+Check what IP-mode the host system is configured for:
+qmicli --device=/dev/cdc-wdm2 --get-expected-data-format
+Check what IP-mode the cellular module require:
+qmicli --device=/dev/cdc-wdm2 --device-open-proxy --wda-get-data-format
+
+***If Raw-IP is not set by default, do the following:
+to change qmi_wwan driver to use Raw-IP:
+Disable the network interfaces exposed by the cellular module:
+ip link set dev wwan0 down
+Trigger the Raw-IP support:
+echo Y > /sys/class/net/wwan0/qmi/raw_ip
+Enable the network interfaces again:
+ip link set dev wwan0 up
+
+
+sudo vi /etc/netplan/00-installer-config.yaml
+Edit your .yaml file so that it looks like this (with your device names placed accordingly, everything listed below is how my .yaml file looked, you need to add all the modem info you see below):
+
+network:
+  ethernets:
+    enp1s0:
+      dhcp4: true
+      optional: true
+    enp2s0:
+      dhcp4: true
+      optional: true
+    enp3s0:
+      dhcp4: true
+      optional: true
+  version: 2
+  renderer: NetworkManager
+  modems:
+    cdc-wdm2:
+      apn: Wbdata
+      dhcp4: true
+      optional: true
+
+Save changes and exit .yaml file.
+sudo netplan apply
+sudo reboot now
+
+sudo qmicli --device=/dev/cdc-wdm2 --device-open-proxy --wds-start-network="ip-type=4,apn=Wbdata" --client-no-release-cid (you must have an APN for your SIM card, mine was Wbdata for example)
+Once you see "Network started", type the following: sudo udhcpc -q -f -n -i wwan0 (remember wwan0 was mine and is just an example)
+After executing above command, an IP should be leased to you.
+At this point, disconnect any external network connections (such as ethernet connections).
+sudo nmcli d (the LTE card should now display as green and status type connected, should be only device listed assuming you disconnected any ethernet/wifi connections)
+ping 8.8.8.8 (test that LTE is working)
